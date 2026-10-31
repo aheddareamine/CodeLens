@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Tool caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+
+# Corpus, datasets, index, and generated results
+data/
+
+# Grader binaries
+moulinette/
+
+# Model weights and downloads
+models/
+*.safetensors
+*.bin
+*.gguf
+*.pt
+*.pth
+
+# Local archives
+*.zip
+
+# Editors and system files
+.vscode/
+.idea/
+.DS_Store
+
+# Secrets and local environment
+.env
+.env.*
+.envrc
+.direnv/

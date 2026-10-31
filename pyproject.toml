@@ -7,7 +7,10 @@ authors = [
     { name = "aheddareamine", email = "amine.aheddare-etu@etu.univh2c.ma" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "fire>=0.7.1",
+    "pydantic>=2.14.2",
+]
 
 [project.scripts]
 codelens = "codelens:main"
@@ -15,3 +18,10 @@ codelens = "codelens:main"
 [build-system]
 requires = ["uv_build>=0.12.6,<0.13.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "flake8>=7.5.0",
+    "mypy>=2.4.1",
+    "pytest>=9.2.0",
+]
