@@ -1,12 +1,6 @@
-import fire 
-
-class Calc:
-    def __init__(self, verbose):
-        self.verbose = verbose
-
-    def add(self, x, y):
-        if self.verbose:
-            print(f"adding {x} and {y}")
-        return x + y
-
-fire.Fire(Calc)
+class Cli:
+    def index(self, max_chunk_size=2000):
+        if max_chunk_size > 2000:
+            print("Tooo long to go")
+            return 
+        print(max_chunk_size)

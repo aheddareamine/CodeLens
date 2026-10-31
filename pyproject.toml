@@ -6,18 +6,13 @@ readme = "README.md"
 authors = [
     { name = "aheddareamine", email = "amine.aheddare-etu@etu.univh2c.ma" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.12"
 dependencies = [
+    "ats>=1.0.8",
     "fire>=0.7.1",
     "pydantic>=2.14.2",
+    "tqdm>=4.70.1",
 ]
-
-[project.scripts]
-codelens = "codelens:main"
-
-[build-system]
-requires = ["uv_build>=0.12.6,<0.13.0"]
-build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
