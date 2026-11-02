@@ -1,21 +1,18 @@
-"""Pydantic data models exchanged between pipeline stages."""
-
 import uuid
-from typing import List
 
+from typing import List
 from pydantic import BaseModel, Field
 
-class chunk_model(BaseModel):
-    file_path : str
-    first_character_index : int
-    last_character_index : int
-    text : str
-    search_text : str
 
 class MinimalSource(BaseModel):
     file_path: str
     first_character_index: int
     last_character_index: int
+
+
+class Chunk(MinimalSource):
+    text : str
+    # search_text : str # optimizing for BM25 most likely coming
 
 
 class UnansweredQuestion(BaseModel):
