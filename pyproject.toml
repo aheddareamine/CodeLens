@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 dependencies = [
     "ats>=1.0.8",
     "fire>=0.7.1",
+    "langchain-text-splitters>=1.1.3",
     "pydantic>=2.14.2",
     "tqdm>=4.70.1",
 ]

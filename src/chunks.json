@@ -1,0 +1,296 @@
+[
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 0,
+    "last_character_index": 157,
+    "text": "\"\"\"AST chunking fixture: module documentation with Unicode café and λ.\n\nUse this module to test exact source spans, semantic boundaries, and size limits.\n\"\"\""
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 159,
+    "last_character_index": 193,
+    "text": "from __future__ import annotations"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 195,
+    "last_character_index": 209,
+    "text": "import asyncio"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 210,
+    "last_character_index": 221,
+    "text": "import json"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 222,
+    "last_character_index": 257,
+    "text": "from collections import defaultdict"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 258,
+    "last_character_index": 298,
+    "text": "from dataclasses import dataclass, field"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 299,
+    "last_character_index": 323,
+    "text": "from pathlib import Path"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 324,
+    "last_character_index": 375,
+    "text": "from typing import Any, Callable, Iterable, TypeVar"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 442,
+    "last_character_index": 505,
+    "text": "CONSTANT = \"A string with an emoji 🐍 and a newline\\\\ninside\"\nMU"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 503,
+    "last_character_index": 581,
+    "text": "MULTILINE = (\n    \"first segment \"\n    \"second segment \"\n    \"third segment\"\n)"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 583,
+    "last_character_index": 649,
+    "text": "\"A standalone string expression that is NOT the module docstring.\""
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 651,
+    "last_character_index": 667,
+    "text": "T = TypeVar(\"T\")"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 670,
+    "last_character_index": 923,
+    "text": "def trace(label: str) -> Callable[[Callable[..., T]], Callable[..., T]]:\n    \"\"\"Decorator factory with a nested function and a closure.\"\"\"\n    def decorate(func: Callable[..., T]) -> Callable[..., T]:\n        def wrapper(*args: Any, **kwargs: Any) -> T:"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 923,
+    "last_character_index": 1060,
+    "text": "\n            print(f\"TRACE {label}: {func.__name__}\")\n            return func(*args, **kwargs)\n        return wrapper\n    return decorate"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 1063,
+    "last_character_index": 1085,
+    "text": "@dataclass(slots=True)"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 1085,
+    "last_character_index": 1309,
+    "text": "\nclass Record:\n    \"\"\"A small model with a class docstring, fields, and a method.\"\"\"\n    key: str\n    values: list[int] = field(default_factory=list)\n\n    @property\n    def total(self) -> int:\n        return sum(self.values)"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 1309,
+    "last_character_index": 1562,
+    "text": "\n\n    def normalized(self) -> dict[str, float]:\n        \"\"\"Return a dictionary with a Unicode local variable.\"\"\"\n        μέσος = self.total / len(self.values) if self.values else 0\n        return {\"average\": μέσος, \"count\": float(len(self.values))}\n\n\ncl"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 1560,
+    "last_character_index": 1761,
+    "text": "class Store:\n    \"\"\"Class containing methods, nested loops, and exception handling.\"\"\"\n\n    def __init__(self, root: Path) -> None:\n        self.root = root\n        self.records: dict[str, Record] = {}"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 1761,
+    "last_character_index": 2046,
+    "text": "\n\n    @trace(\"load\")\n    def load(self, filename: str) -> Record:\n        path = self.root / filename\n        try:\n            payload = json.loads(path.read_text(encoding=\"utf-8\"))\n        except FileNotFoundError as exc:\n            raise ValueError(f\"Missing file: {path}\") from exc"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 2046,
+    "last_character_index": 2300,
+    "text": "\n        except json.JSONDecodeError as exc:\n            raise ValueError(f\"Malformed JSON: {path}\") from exc\n        record = Record(key=str(payload[\"key\"]), values=list(payload[\"values\"]))\n        self.records[record.key] = record\n        return record"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 2300,
+    "last_character_index": 2585,
+    "text": "\n\n    def group(self) -> dict[str, list[int]]:\n        groups: dict[str, list[int]] = defaultdict(list)\n        for record in self.records.values():\n            for number in record.values:\n                if number < 0:\n                    continue\n                if number % 2 == 0:"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 2585,
+    "last_character_index": 2734,
+    "text": "\n                    groups[\"even\"].append(number)\n                else:\n                    groups[\"odd\"].append(number)\n        return dict(groups)"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 2737,
+    "last_character_index": 2988,
+    "text": "@trace(\"transform\")\ndef transform(items: Iterable[str], *, upper: bool = False) -> list[str]:\n    \"\"\"A decorated function with a multiline signature and a comprehension.\"\"\"\n    return [item.strip().upper() if upper else item.strip() for item in items]"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 2991,
+    "last_character_index": 3192,
+    "text": "async def fetch_simulated(name: str) -> dict[str, str]:\n    \"\"\"An async function containing await and an async context switch.\"\"\"\n    await asyncio.sleep(0)\n    return {\"name\": name, \"status\": \"ready\"}"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 3195,
+    "last_character_index": 3364,
+    "text": "def generator(limit: int):\n    \"\"\"A generator with yield, for, and if statements.\"\"\"\n    for number in range(limit):\n        if number % 3 == 0:\n            yield number"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 3367,
+    "last_character_index": 3554,
+    "text": "def nested_scope(value: int) -> int:\n    \"\"\"A nested function is not a top-level tree.body entry.\"\"\"\n    def double(number: int) -> int:\n        return number * 2\n    return double(value)"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 3636,
+    "last_character_index": 3763,
+    "text": "def oversized_function(items: list[int]) -> dict[str, Any]:\n    \"\"\"This function is intentionally longer than 2,000 characters."
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 3763,
+    "last_character_index": 4053,
+    "text": "\n\n    A chunker must not emit the whole function as one chunk when the size cap\n    is 2,000. Split at safe internal statement boundaries or use another\n    documented fallback that preserves correct character offsets.\n    \"\"\"\n    result: dict[str, Any] = {\"count\": len(items), \"steps\": []}"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 4053,
+    "last_character_index": 4296,
+    "text": "\n    for item in items:\n        if item < 0:\n            result[\"steps\"].append((\"negative\", item))\n        elif item == 0:\n            result[\"steps\"].append((\"zero\", item))\n        else:\n            result[\"steps\"].append((\"positive\", item))"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 4296,
+    "last_character_index": 4568,
+    "text": "\n    # The following repeated narrative comments are deliberate: comments\n    # occupy source positions but are not separately exposed by ast.parse.\n    # Fixture padding 1: source offsets and context windows must remain accurate after splitting; preserve nearby comments."
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 4568,
+    "last_character_index": 4816,
+    "text": "\n    # Fixture padding 2: source offsets and context windows must remain accurate after splitting; preserve nearby comments.\n    # Fixture padding 3: source offsets and context windows must remain accurate after splitting; preserve nearby comments."
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 4816,
+    "last_character_index": 5064,
+    "text": "\n    # Fixture padding 4: source offsets and context windows must remain accurate after splitting; preserve nearby comments.\n    # Fixture padding 5: source offsets and context windows must remain accurate after splitting; preserve nearby comments."
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 5064,
+    "last_character_index": 5312,
+    "text": "\n    # Fixture padding 6: source offsets and context windows must remain accurate after splitting; preserve nearby comments.\n    # Fixture padding 7: source offsets and context windows must remain accurate after splitting; preserve nearby comments."
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 5312,
+    "last_character_index": 5560,
+    "text": "\n    # Fixture padding 8: source offsets and context windows must remain accurate after splitting; preserve nearby comments.\n    # Fixture padding 9: source offsets and context windows must remain accurate after splitting; preserve nearby comments."
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 5560,
+    "last_character_index": 5810,
+    "text": "\n    # Fixture padding 10: source offsets and context windows must remain accurate after splitting; preserve nearby comments.\n    # Fixture padding 11: source offsets and context windows must remain accurate after splitting; preserve nearby comments."
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 5810,
+    "last_character_index": 6060,
+    "text": "\n    # Fixture padding 12: source offsets and context windows must remain accurate after splitting; preserve nearby comments.\n    # Fixture padding 13: source offsets and context windows must remain accurate after splitting; preserve nearby comments."
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 6060,
+    "last_character_index": 6310,
+    "text": "\n    # Fixture padding 14: source offsets and context windows must remain accurate after splitting; preserve nearby comments.\n    # Fixture padding 15: source offsets and context windows must remain accurate after splitting; preserve nearby comments."
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 6310,
+    "last_character_index": 6560,
+    "text": "\n    # Fixture padding 16: source offsets and context windows must remain accurate after splitting; preserve nearby comments.\n    # Fixture padding 17: source offsets and context windows must remain accurate after splitting; preserve nearby comments."
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 6560,
+    "last_character_index": 6810,
+    "text": "\n    # Fixture padding 18: source offsets and context windows must remain accurate after splitting; preserve nearby comments.\n    # Fixture padding 19: source offsets and context windows must remain accurate after splitting; preserve nearby comments."
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 6810,
+    "last_character_index": 7060,
+    "text": "\n    # Fixture padding 20: source offsets and context windows must remain accurate after splitting; preserve nearby comments.\n    # Fixture padding 21: source offsets and context windows must remain accurate after splitting; preserve nearby comments."
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 7060,
+    "last_character_index": 7310,
+    "text": "\n    # Fixture padding 22: source offsets and context windows must remain accurate after splitting; preserve nearby comments.\n    # Fixture padding 23: source offsets and context windows must remain accurate after splitting; preserve nearby comments."
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 7310,
+    "last_character_index": 7560,
+    "text": "\n    # Fixture padding 24: source offsets and context windows must remain accurate after splitting; preserve nearby comments.\n    # Fixture padding 25: source offsets and context windows must remain accurate after splitting; preserve nearby comments."
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 7560,
+    "last_character_index": 7810,
+    "text": "\n    # Fixture padding 26: source offsets and context windows must remain accurate after splitting; preserve nearby comments.\n    # Fixture padding 27: source offsets and context windows must remain accurate after splitting; preserve nearby comments."
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 7810,
+    "last_character_index": 8060,
+    "text": "\n    # Fixture padding 28: source offsets and context windows must remain accurate after splitting; preserve nearby comments.\n    # Fixture padding 29: source offsets and context windows must remain accurate after splitting; preserve nearby comments."
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 8060,
+    "last_character_index": 8310,
+    "text": "\n    # Fixture padding 30: source offsets and context windows must remain accurate after splitting; preserve nearby comments.\n    # Fixture padding 31: source offsets and context windows must remain accurate after splitting; preserve nearby comments."
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 8310,
+    "last_character_index": 8560,
+    "text": "\n    # Fixture padding 32: source offsets and context windows must remain accurate after splitting; preserve nearby comments.\n    # Fixture padding 33: source offsets and context windows must remain accurate after splitting; preserve nearby comments."
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 8560,
+    "last_character_index": 8852,
+    "text": "\n    # Fixture padding 34: source offsets and context windows must remain accurate after splitting; preserve nearby comments.\n    # Fixture padding 35: source offsets and context windows must remain accurate after splitting; preserve nearby comments.\n    for index, value in enumerate(items):"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 8852,
+    "last_character_index": 9145,
+    "text": "\n        match value:\n            case 0:\n                result[\"steps\"].append((\"match-zero\", index))\n            case x if x > 10:\n                result[\"steps\"].append((\"match-large\", x))\n            case _:\n                result[\"steps\"].append((\"match-other\", value))\n    return result"
+  },
+  {
+    "file_path": "../data/raw/vllm-0.10.1/vllm/test.py",
+    "first_character_index": 9148,
+    "last_character_index": 9246,
+    "text": "if __name__ == \"__main__\":\n    example = Record(\"demo\", [1, 2, 3])\n    print(example.normalized())"
+  }
+]
