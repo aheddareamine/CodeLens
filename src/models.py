@@ -11,7 +11,7 @@ class MinimalSource(BaseModel):
 
 
 class Chunk(MinimalSource):
-    text : str
+    text: str
     # search_text : str # optimizing for BM25 most likely coming
 
 

@@ -28,7 +28,7 @@ class Cli:
 
         if max_chunk_size > 2000 or max_chunk_size <= 0:
             raise ValueError(f"{max_chunk_size} is invalid value for max_chunk_size")
-        
+
 
 
     def search(self, query: str, k: int):

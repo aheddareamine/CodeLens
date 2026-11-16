@@ -20,7 +20,11 @@ venv/
 data/
 
 # Grader binaries
-moulinette/
+moulinette
+moulinette-*
+
+# Subject, fixtures and other local material
+project_data/
 
 # Model weights and downloads
 models/
