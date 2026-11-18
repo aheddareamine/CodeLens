@@ -1,6 +1,8 @@
 import ast
+from pathlib import Path
 from pydantic import ValidationError
 
+from src.corpus import read_file
 from src.models import Chunk
 
 
@@ -13,7 +15,7 @@ def split_by_lines(text: str, max_chunk_size: int) -> list[tuple[int, str]]:
     pieces = []
     current = ""
     current_start = 0
-    position = 0  # index in text of the line we are reading
+    position = 0
 
     for line in text.splitlines(keepends=True):
         # the line doesn't fit: save the current piece and start a new one
@@ -64,12 +66,13 @@ def py_chunker(file_name: str, max_chunk_size: int) -> list[Chunk]:
             line_offsets.append(line_offsets[-1] + len(line))
 
         for block in tree.body:
-            # end_lineno / end_col_offset are typed "int | None" by mypy
+            # end_lineno is typed "int | None" by mypy
             end_lineno = block.end_lineno or block.lineno
-            end_col_offset = block.end_col_offset or 0
 
             block_start = line_offsets[block.lineno - 1] + block.col_offset
-            block_end = line_offsets[end_lineno - 1] + end_col_offset
+            # end at the start of the next line (= end of the block's last
+            # line). Not end_col_offset: ast counts it in bytes, not chars.
+            block_end = line_offsets[end_lineno]
 
             # include decorators for functions and classes
             if (isinstance(block, (ast.ClassDef,
@@ -149,7 +152,110 @@ def py_chunker(file_name: str, max_chunk_size: int) -> list[Chunk]:
                 imports_end_index = end
                 imports = source[start:end]
 
+        # don't forget the last group of imports
+        if imports != "":
+            chunks.append(Chunk(
+                file_path=file_name,
+                first_character_index=imports_start_index,
+                last_character_index=imports_end_index,
+                text=imports,
+            ))
+
     except (ValidationError, SyntaxError) as e:
         print(f"Chunking error in {file_name}: {e}")
 
     return chunks
+
+
+def md_chunker(file_name: str, max_chunk_size: int) -> list[Chunk]:
+    """Chunk a Markdown file by sections (headings), a .txt file by lines.
+
+    Returns:
+        The chunks of the file (empty list if it cannot be read).
+    """
+    chunks: list[Chunk] = []
+
+    source = read_file(Path(file_name))
+    if source is None:
+        return chunks
+
+    section_starts = [0]
+
+    if file_name.endswith(".md"):
+        in_code_block = False
+        position = 0
+
+        for line in source.splitlines(keepends=True):
+            # inside ``` blocks, "# ..." is a shell comment, not a heading
+            if line.lstrip().startswith("```"):
+                in_code_block = not in_code_block
+            elif line.startswith("#") and not in_code_block and position > 0:
+                section_starts.append(position)
+            position += len(line)
+
+    section_starts.append(len(source))
+
+    current_start = 0
+    current_end = 0
+
+    for i in range(len(section_starts) - 1):
+        start = section_starts[i]
+        end = section_starts[i + 1]
+
+        if end - start > max_chunk_size:
+            # save what we have, then split this big section
+            if current_end > current_start:
+                chunks.append(Chunk(
+                    file_path=file_name,
+                    first_character_index=current_start,
+                    last_character_index=current_end,
+                    text=source[current_start:current_end],
+                ))
+
+            pieces = split_by_lines(source[start:end], max_chunk_size)
+
+            for relative_start, piece in pieces:
+                absolute_start = start + relative_start
+                chunks.append(Chunk(
+                    file_path=file_name,
+                    first_character_index=absolute_start,
+                    last_character_index=absolute_start + len(piece),
+                    text=piece,
+                ))
+
+            current_start = end
+            current_end = end
+
+        elif end - current_start <= max_chunk_size:
+            # the section still fits in the current chunk
+            current_end = end
+
+        else:
+            # it doesn't fit: save the current chunk, start a new one
+            chunks.append(Chunk(
+                file_path=file_name,
+                first_character_index=current_start,
+                last_character_index=current_end,
+                text=source[current_start:current_end],
+            ))
+            current_start = start
+            current_end = end
+
+    # don't forget the last chunk
+    if current_end > current_start:
+        chunks.append(Chunk(
+            file_path=file_name,
+            first_character_index=current_start,
+            last_character_index=current_end,
+            text=source[current_start:current_end],
+        ))
+
+    return chunks
+
+
+def chunk_file(file_name: str, max_chunk_size: int) -> list[Chunk]:
+    """Chunk one file with the strategy that fits its extension."""
+    if file_name.endswith(".py"):
+        return py_chunker(file_name, max_chunk_size)
+    # corpus.py only gives .py, .md and .txt files
+    return md_chunker(file_name, max_chunk_size)
