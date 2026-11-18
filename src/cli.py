@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from src.indexer import build_index
+
 
 class PathValidationError(Exception):
     """Raised when a provided path is invalid"""
@@ -21,15 +23,25 @@ class Cli:
         return path
 
 
-    def index(self, path: str, max_chunk_size=2000):
-        "Ingest data/raw/ and build the index under data/processed/."
+    def index(self, max_chunk_size: int = 2000, raw_dir: str = "data/raw",
+              index_dir: str = "data/processed") -> None:
+        """Ingest data/raw/ and build the index under data/processed/."""
+        # Fire gives a str if the user types --max_chunk_size abc
+        if not isinstance(max_chunk_size, int) or \
+                not 0 < max_chunk_size <= 2000:
+            print("Error: max_chunk_size must be an integer between 1 "
+                  "and 2000")
+            return
 
-        path = self.validate_path(path, file_type="dir")
+        try:
+            count = build_index(raw_dir, max_chunk_size, index_dir)
+        except OSError as error:
+            print(f"Error while indexing: {error}")
+            return
 
-        if max_chunk_size > 2000 or max_chunk_size <= 0:
-            raise ValueError(f"{max_chunk_size} is invalid value for max_chunk_size")
-
-
+        if count > 0:
+            print(f"Ingestion complete! {count} chunks, indices saved "
+                  f"under {index_dir}/")
 
     def search(self, query: str, k: int):
         "Return the top-k sources for a single query."
