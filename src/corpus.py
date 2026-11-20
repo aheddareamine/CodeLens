@@ -2,7 +2,7 @@ from pathlib import Path
 
 
 def is_wanted(relative_path: Path) -> bool:
-    """Tell whether a file (path relative to the raw folder) is indexed."""
+    """Tell whether a file is indexed."""
     extension = relative_path.suffix
 
     if extension in (".md", ".txt"):
