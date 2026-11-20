@@ -251,7 +251,7 @@ def md_chunker(file_name: str, max_chunk_size: int) -> list[Chunk]:
         ))
 
     return chunks
-git add src/chunking.py src/corpus.py
+
 
 def chunk_file(file_name: str, max_chunk_size: int) -> list[Chunk]:
     """Chunk one file with the strategy that fits its extension."""
