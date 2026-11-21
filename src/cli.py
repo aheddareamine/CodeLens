@@ -1,9 +1,28 @@
 from pathlib import Path
 
+from tqdm import tqdm
+
 from src.evaluate import recall_at_k
+from src.generator import Generator
 from src.indexer import build_index, load_index
+from src.models import MinimalAnswer, StudentSearchResultsAndAnswer
 from src.search import (load_dataset, load_search_results, save_json,
                         search_dataset, search_sources)
+
+
+def load_generator() -> Generator | None:
+    """Load Qwen3-0.6B.
+
+    Returns:
+        The generator, or None (after printing why) if it cannot load.
+    """
+    print("Loading the model...")
+    try:
+        return Generator()
+    except (OSError, ValueError) as error:
+        # OSError: no internet and the model is not in the cache yet
+        print(f"Error: cannot load the model: {error}")
+        return None
 
 
 def validate_path(path: str, file_type: str = "file") -> Path | None:
@@ -137,21 +156,71 @@ class Cli:
         if save_json(results, output_file):
             print(f"Saved student_search_results to {output_file}")
 
-    def answer(self, query: str, k: int = 10) -> None:
+    def answer(self, query: str, k: int = 10,
+               index_dir: str = "data/processed") -> None:
         """Answer a single query using the retrieved context"""
+        query = str(query)
+        if query.strip() == "":
+            print("Error: the query is empty")
+            return
         if not is_valid_k(k):
             return
-        print("answer: not implemented yet (step 5)")
+
+        index = load_index(index_dir)
+        if index is None:
+            return
+        chunks, bm25 = index
+        sources = search_sources(chunks, bm25, query, k)
+
+        generator = load_generator()
+        if generator is None:
+            return
+
+        print(generator.answer(query, sources))
+        print("\nSources:")
+        for source in sources:
+            print(f"  {source.file_path} "
+                  f"[{source.first_character_index}:"
+                  f"{source.last_character_index}]")
 
     def answer_dataset(self, student_search_results_path: str,
                        save_directory: str) -> None:
         """Generate answers for a dataset,
         producing a StudentSearchResultsAndAnswer JSON file."""
-        if validate_path(student_search_results_path) is None:
+        results_file = validate_path(student_search_results_path)
+        if results_file is None:
             return
-        if make_save_folder(save_directory) is None:
+        results = load_search_results(results_file)
+        if results is None:
             return
-        print("answer_dataset: not implemented yet (step 5)")
+        folder = make_save_folder(save_directory)
+        if folder is None:
+            return
+
+        # load the model once, not once per question
+        generator = load_generator()
+        if generator is None:
+            return
+
+        print(f"Loaded {len(results.search_results)} questions")
+        answers: list[MinimalAnswer] = []
+        for result in tqdm(results.search_results, desc="Answering"):
+            answers.append(MinimalAnswer(
+                question_id=result.question_id,
+                question=result.question,
+                retrieved_sources=result.retrieved_sources,
+                answer=generator.answer(result.question,
+                                        result.retrieved_sources),
+            ))
+        print(f"Processed {len(answers)} of {len(results.search_results)} "
+              f"questions")
+
+        output = StudentSearchResultsAndAnswer(search_results=answers,
+                                               k=results.k)
+        output_file = folder / results_file.name
+        if save_json(output, output_file):
+            print(f"Saved student_search_results_and_answer to "
+                  f"{output_file}")
 
     def evaluate(self, student_search_results_path: str,
                  dataset_path: str) -> None:
