@@ -10,6 +10,18 @@ from src.search import (load_dataset, load_search_results, save_json,
                         search_dataset, search_sources)
 
 
+# Default paths: every one can still be changed with its CLI argument.
+RAW_DIR = "data/raw"
+INDEX_DIR = "data/processed"
+DATASET = "data/datasets/UnansweredQuestions/dataset_docs_public.json"
+SEARCH_RESULTS = ("data/output/search_results/UnansweredQuestions/"
+                  "dataset_docs_public.json")
+# the folders the outputs go in, one sub-folder per dataset scope
+SEARCH_OUTPUT_DIR = "data/output/search_results"
+ANSWER_OUTPUT_DIR = "data/output/search_results_and_answer"
+GROUND_TRUTH_DIR = "data/datasets/AnsweredQuestions"
+
+
 def load_generator() -> Generator | None:
     """Load Qwen3-0.6B.
 
@@ -75,8 +87,8 @@ def make_save_folder(save_directory: str) -> Path | None:
 class Cli:
     """The commands of the subject. Fire exposes every public method."""
 
-    def index(self, max_chunk_size: int = 2000, raw_dir: str = "data/raw",
-              index_dir: str = "data/processed") -> None:
+    def index(self, max_chunk_size: int = 2000, raw_dir: str = RAW_DIR,
+              index_dir: str = INDEX_DIR) -> None:
         """Ingest data/raw/ and build the index under data/processed/."""
         # Fire gives a str if the user types --max_chunk_size abc
         if isinstance(max_chunk_size, bool) or \
@@ -97,7 +109,7 @@ class Cli:
                   f"under {index_dir}/")
 
     def search(self, query: str, k: int = 10,
-               index_dir: str = "data/processed") -> None:
+               index_dir: str = INDEX_DIR) -> None:
         """Return the top-k sources for a single query."""
         # Fire turns "search 42" into the int 42
         query = str(query)
@@ -122,9 +134,9 @@ class Cli:
                   f"[{source.first_character_index}:"
                   f"{source.last_character_index}]")
 
-    def search_dataset(self, dataset_path: str, k: int,
-                       save_directory: str,
-                       index_dir: str = "data/processed") -> None:
+    def search_dataset(self, dataset_path: str = DATASET, k: int = 10,
+                       save_directory: str | None = None,
+                       index_dir: str = INDEX_DIR) -> None:
         """Run search over a whole dataset
         and write a StudentSearchResults JSON file"""
         if not is_valid_k(k):
@@ -133,6 +145,12 @@ class Cli:
         dataset_file = validate_path(dataset_path)
         if dataset_file is None:
             return
+
+        # no folder given: data/output/search_results/<scope of the dataset>
+        # (UnansweredQuestions or AnsweredQuestions), so runs on the two
+        # scopes never overwrite each other
+        if save_directory is None:
+            save_directory = f"{SEARCH_OUTPUT_DIR}/{dataset_file.parent.name}"
 
         dataset = load_dataset(dataset_file)
         if dataset is None:
@@ -157,7 +175,7 @@ class Cli:
             print(f"Saved student_search_results to {output_file}")
 
     def answer(self, query: str, k: int = 10,
-               index_dir: str = "data/processed") -> None:
+               index_dir: str = INDEX_DIR) -> None:
         """Answer a single query using the retrieved context"""
         query = str(query)
         if query.strip() == "":
@@ -183,13 +201,19 @@ class Cli:
                   f"[{source.first_character_index}:"
                   f"{source.last_character_index}]")
 
-    def answer_dataset(self, student_search_results_path: str,
-                       save_directory: str) -> None:
+    def answer_dataset(self,
+                       student_search_results_path: str = SEARCH_RESULTS,
+                       save_directory: str | None = None) -> None:
         """Generate answers for a dataset,
         producing a StudentSearchResultsAndAnswer JSON file."""
         results_file = validate_path(student_search_results_path)
         if results_file is None:
             return
+
+        # no folder given: same scope folder as the search results
+        if save_directory is None:
+            save_directory = f"{ANSWER_OUTPUT_DIR}/{results_file.parent.name}"
+
         results = load_search_results(results_file)
         if results is None:
             return
@@ -222,13 +246,19 @@ class Cli:
             print(f"Saved student_search_results_and_answer to "
                   f"{output_file}")
 
-    def evaluate(self, student_search_results_path: str,
-                 dataset_path: str) -> None:
+    def evaluate(self, student_search_results_path: str = SEARCH_RESULTS,
+                 dataset_path: str | None = None) -> None:
         """Report your own recall@k against a ground-truth dataset,
         for your own testing."""
         results_file = validate_path(student_search_results_path)
+        if results_file is None:
+            return
+
+        # no dataset given: the answered dataset with the same file name
+        if dataset_path is None:
+            dataset_path = f"{GROUND_TRUTH_DIR}/{results_file.name}"
         dataset_file = validate_path(dataset_path)
-        if results_file is None or dataset_file is None:
+        if dataset_file is None:
             return
 
         results = load_search_results(results_file)

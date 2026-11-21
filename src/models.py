@@ -11,8 +11,8 @@ class MinimalSource(BaseModel):
 
 
 class Chunk(MinimalSource):
+    """A piece of a corpus file: its location and its text."""
     text: str
-    # search_text : str # optimizing for BM25 most likely coming
 
 
 class UnansweredQuestion(BaseModel):

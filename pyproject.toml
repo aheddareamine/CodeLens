@@ -1,7 +1,7 @@
 [project]
 name = "codelens"
 version = "0.1.0"
-description = "Add your description here"
+description = "RAG over the vLLM codebase: BM25 retrieval and Qwen3-0.6B answers"
 readme = "README.md"
 authors = [
     { name = "aheddareamine", email = "amine.aheddare-etu@etu.univh2c.ma" }

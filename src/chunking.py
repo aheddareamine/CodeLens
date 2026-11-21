@@ -50,11 +50,9 @@ def py_chunker(file_name: str, max_chunk_size: int) -> list[Chunk]:
     is_module_level_import = True
     imports = ""
 
-    try:
-        with open(file_name, "r", encoding="utf-8", newline="") as f_py:
-            source = f_py.read()
-    except (FileNotFoundError, PermissionError, IsADirectoryError) as e:
-        print(f"File access error {e}")
+    # read_file also catches UnicodeDecodeError (a file that is not utf-8)
+    source = read_file(Path(file_name))
+    if source is None:
         return chunks
 
     try:
@@ -85,7 +83,6 @@ def py_chunker(file_name: str, max_chunk_size: int) -> list[Chunk]:
                 first_decorator = block.decorator_list[0]
                 decorator_line = first_decorator.lineno - 1
                 block_start = line_offsets[decorator_line] + block.col_offset
-                block_code = source[block_start:block_end]
 
             else:
                 if not isinstance(block, (ast.Import, ast.ImportFrom)):
