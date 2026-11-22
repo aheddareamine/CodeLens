@@ -24,12 +24,18 @@ make lint           # flake8 + mypy
 make clean          # remove caches
 ```
 
+Put the vLLM repository in `data/raw/` and unzip the datasets in `data/`:
+
+```bash
+cd data && unzip datasets_public.zip && cd ..
+```
+
 Expected layout:
 
 ```
 data/raw/vllm-0.10.1/                    corpus to index
 data/processed/                          index (chunks.json, bm25.pkl)
-data/datasets/{Unanswered,Answered}Questions/
+data/datasets_public/public/{Unanswered,Answered}Questions/
 data/output/search_results/<Scope>/
 data/output/search_results_and_answer/<Scope>/
 ```
@@ -48,14 +54,14 @@ uv run python -m src search "How do I load a LoRA adapter?" --k 5
 
 # 3. search a whole dataset
 uv run python -m src search_dataset \
-    --dataset_path data/datasets/UnansweredQuestions/dataset_code_public.json \
+    --dataset_path data/datasets_public/public/UnansweredQuestions/dataset_code_public.json \
     --k 10 \
     --save_directory data/output/search_results/UnansweredQuestions
 
 # 4. check our own recall@k (the official score comes from the moulinette)
 uv run python -m src evaluate \
     --student_search_results_path data/output/search_results/UnansweredQuestions/dataset_code_public.json \
-    --dataset_path data/datasets/AnsweredQuestions/dataset_code_public.json
+    --dataset_path data/datasets_public/public/AnsweredQuestions/dataset_code_public.json
 
 # 5. answer one question, or a whole search result file
 uv run python -m src answer "How do I load a LoRA adapter?" --k 5
@@ -69,7 +75,7 @@ Shortcuts thanks to the defaults:
 - `search_dataset` without `--save_directory` writes to
   `data/output/search_results/<scope of the dataset>/`.
 - `evaluate` without `--dataset_path` uses the file with the same name in
-  `data/datasets/AnsweredQuestions/`.
+  `data/datasets_public/public/AnsweredQuestions/`.
 - `answer_dataset` without `--save_directory` writes to
   `data/output/search_results_and_answer/<scope of the results>/`.
 - `--index_dir` (default `data/processed`) and `--raw_dir` (default

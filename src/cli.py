@@ -13,13 +13,15 @@ from src.search import (load_dataset, load_search_results, save_json,
 # Default paths: every one can still be changed with its CLI argument.
 RAW_DIR = "data/raw"
 INDEX_DIR = "data/processed"
-DATASET = "data/datasets/UnansweredQuestions/dataset_docs_public.json"
+# where datasets_public.zip puts the datasets once unzipped in data/
+DATASET = ("data/datasets_public/public/UnansweredQuestions/"
+           "dataset_docs_public.json")
 SEARCH_RESULTS = ("data/output/search_results/UnansweredQuestions/"
                   "dataset_docs_public.json")
 # the folders the outputs go in, one sub-folder per dataset scope
 SEARCH_OUTPUT_DIR = "data/output/search_results"
 ANSWER_OUTPUT_DIR = "data/output/search_results_and_answer"
-GROUND_TRUTH_DIR = "data/datasets/AnsweredQuestions"
+GROUND_TRUTH_DIR = "data/datasets_public/public/AnsweredQuestions"
 
 
 def load_generator() -> Generator | None:
