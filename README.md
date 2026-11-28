@@ -220,10 +220,6 @@ the right region already counts, and very small chunks lose context words.
 
 - Robertson and Zaragoza, *The Probabilistic Relevance Framework: BM25 and
   Beyond* (2009)
-- Manning, Raghavan and Schütze, *Introduction to Information Retrieval*,
-  chapters 6 and 11 (TF-IDF, BM25)
-- Lewis et al., *Retrieval-Augmented Generation for Knowledge-Intensive NLP
-  Tasks* (2020)
 - Python `ast` module documentation
 - Hugging Face Transformers documentation and the Qwen3-0.6B model card
 - Python Fire, pydantic and uv documentation
@@ -232,6 +228,4 @@ the right region already counts, and very small chunks lose context words.
 
 An AI assistant (Claude) was used as a tutor: to explain concepts (BM25,
 IoU, chat templates), to review code and point out bugs and edge cases, to
-run the timing and edge-case tests, and to help write this README. The code
-was written and rewritten by hand step by step, and every part was checked
-and understood before being kept.
+run the timing and edge-case tests, and to help write this README.
