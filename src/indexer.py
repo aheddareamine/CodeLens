@@ -41,9 +41,13 @@ def build_index(raw_dir: str, max_chunk_size: int, index_dir: str) -> int:
     folder = Path(index_dir)
     folder.mkdir(parents=True, exist_ok=True)
 
+    # pydantic objects cannot go in JSON directly: turn each one into a dict
+    chunk_dicts = []
+    for chunk in chunks:
+        chunk_dicts.append(chunk.model_dump())
+
     with open(folder / "chunks.json", "w", encoding="utf-8") as file:
-        json.dump([chunk.model_dump() for chunk in chunks], file,
-                  indent=2, ensure_ascii=False)
+        json.dump(chunk_dicts, file, indent=2, ensure_ascii=False)
 
     with open(folder / "bm25.pkl", "wb") as file:
         pickle.dump(bm25, file)
@@ -61,7 +65,11 @@ def load_index(index_dir: str) -> tuple[list[Chunk], BM25] | None:
 
     try:
         with open(folder / "chunks.json", "r", encoding="utf-8") as file:
-            chunks = [Chunk.model_validate(item) for item in json.load(file)]
+            chunk_dicts = json.load(file)
+
+        chunks: list[Chunk] = []
+        for chunk_dict in chunk_dicts:
+            chunks.append(Chunk.model_validate(chunk_dict))
 
         with open(folder / "bm25.pkl", "rb") as file:
             bm25: BM25 = pickle.load(file)
@@ -69,9 +77,19 @@ def load_index(index_dir: str) -> tuple[list[Chunk], BM25] | None:
     except FileNotFoundError:
         print(f"No index found in {index_dir}, run the index command first")
         return None
-    except (OSError, ValueError, pickle.UnpicklingError) as error:
-        # ValueError also covers broken JSON and pydantic ValidationError
+    except (OSError, ValueError, pickle.UnpicklingError, EOFError,
+            AttributeError, ImportError) as error:
+        # ValueError also covers broken JSON and pydantic ValidationError.
+        # EOFError: empty bm25.pkl. AttributeError / ImportError: the
+        # pickle was saved by another version of the code.
         print(f"Cannot load the index from {index_dir}: {error}")
+        return None
+
+    # chunk i must be document i of BM25: if the two files come from
+    # different runs (e.g. Ctrl+C between the two writes), they don't match
+    if not isinstance(bm25, BM25) or len(bm25.doc_lengths) != len(chunks):
+        print(f"The index in {index_dir} is broken or out of date, "
+              f"run the index command again")
         return None
 
     return chunks, bm25

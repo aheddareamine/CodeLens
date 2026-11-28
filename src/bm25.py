@@ -65,6 +65,7 @@ class BM25:
 
     def build(self, documents: list[list[str]]) -> None:
         """Count the words of every document and compute their idf."""
+        # 1. inverted index: for each word, how many times it is in each doc
         for doc_id in range(len(documents)):
             tokens = documents[doc_id]
             self.doc_lengths.append(len(tokens))

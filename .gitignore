@@ -47,3 +47,9 @@ models/
 .env.*
 .envrc
 .direnv/
+
+# Local study notes (not part of the submission)
+CODE_GUIDE.md
+
+# Exam scripts output
+evaluations/

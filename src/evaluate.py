@@ -55,7 +55,8 @@ def recall_at_k(results: StudentSearchResults, dataset: RagDataset,
             continue
 
         # a question we have no result for counts as 0
-        top_k = retrieved_by_id.get(question.question_id, [])[:k]
+        retrieved = retrieved_by_id.get(question.question_id, [])
+        top_k = retrieved[:k]
 
         found = 0
         for expected in question.sources:

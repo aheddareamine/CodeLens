@@ -1,6 +1,5 @@
 import ast
 from pathlib import Path
-from pydantic import ValidationError
 
 from src.corpus import read_file
 from src.models import Chunk
@@ -39,6 +38,27 @@ def split_by_lines(text: str, max_chunk_size: int) -> list[tuple[int, str]]:
     return pieces
 
 
+def lines_to_chunks(file_name: str, text: str, offset: int,
+                    max_chunk_size: int) -> list[Chunk]:
+    """Split text by lines and turn the pieces into chunks.
+
+    offset is where text starts inside the file, so the chunk indexes
+    point to the right place in the whole file.
+    """
+    chunks: list[Chunk] = []
+
+    for relative_start, piece in split_by_lines(text, max_chunk_size):
+        absolute_start = offset + relative_start
+        chunks.append(Chunk(
+            file_path=file_name,
+            first_character_index=absolute_start,
+            last_character_index=absolute_start + len(piece),
+            text=piece,
+        ))
+
+    return chunks
+
+
 def py_chunker(file_name: str, max_chunk_size: int) -> list[Chunk]:
     """Chunk a Python file by top-level blocks (imports, classes, functions).
 
@@ -57,100 +77,78 @@ def py_chunker(file_name: str, max_chunk_size: int) -> list[Chunk]:
 
     try:
         tree = ast.parse(source)
-        lines = source.splitlines(keepends=True)
-        line_offsets = [0]
+    except (SyntaxError, ValueError, RecursionError) as error:
+        # ast cannot read it (bad syntax, null bytes, too deeply nested):
+        # keep the file searchable by cutting it by lines instead
+        print(f"Warning: cannot parse {file_name} ({error}), "
+              f"split by lines instead")
+        return lines_to_chunks(file_name, source, 0, max_chunk_size)
 
-        for line in lines:
-            line_offsets.append(line_offsets[-1] + len(line))
+    lines = source.splitlines(keepends=True)
+    line_offsets = [0]
 
-        for block in tree.body:
-            # end_lineno is typed "int | None" by mypy
-            end_lineno = block.end_lineno or block.lineno
+    for line in lines:
+        line_offsets.append(line_offsets[-1] + len(line))
 
-            block_start = line_offsets[block.lineno - 1] + block.col_offset
-            # end at the start of the next line (= end of the block's last
-            # line). Not end_col_offset: ast counts it in bytes, not chars.
-            block_end = line_offsets[end_lineno]
+    for block in tree.body:
+        # end_lineno is typed "int | None" by mypy
+        end_lineno = block.end_lineno or block.lineno
 
-            # include decorators for functions and classes
-            if (isinstance(block, (ast.ClassDef,
-                                   ast.FunctionDef,
-                                   ast.AsyncFunctionDef))
-                    and block.decorator_list):
-                # whenever a function or class block is found
-                # that is the end of the module level imports
-                is_module_level_import = False
-                first_decorator = block.decorator_list[0]
-                decorator_line = first_decorator.lineno - 1
-                block_start = line_offsets[decorator_line] + block.col_offset
+        block_start = line_offsets[block.lineno - 1] + block.col_offset
+        # end at the start of the next line (= end of the block's last
+        # line). Not end_col_offset: ast counts it in bytes, not chars.
+        block_end = line_offsets[end_lineno]
+
+        # the first statement that is not an import ends the
+        # module level imports (the ones at the top of the file)
+        is_import = isinstance(block, (ast.Import, ast.ImportFrom))
+        if not is_import:
+            is_module_level_import = False
+
+        # functions and classes start at their first decorator
+        # (isinstance must be in the if, for mypy to know the type)
+        definitions = (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
+        if isinstance(block, definitions) and block.decorator_list:
+            first_decorator = block.decorator_list[0]
+            decorator_line = first_decorator.lineno - 1
+            block_start = line_offsets[decorator_line] + block.col_offset
+
+        block_code = source[block_start:block_end]
+
+        if len(block_code) <= max_chunk_size:
+            chunk = Chunk(
+                file_path=file_name,
+                first_character_index=block_start,
+                last_character_index=block_end,
+                text=block_code)
+
+            if is_import and is_module_level_import:
+                import_blocks.append(chunk)
 
             else:
-                if not isinstance(block, (ast.Import, ast.ImportFrom)):
-                    is_module_level_import = False
+                chunks.append(chunk)
 
-            block_code = source[block_start:block_end]
+        else:
+            chunks.extend(lines_to_chunks(file_name, block_code, block_start,
+                                          max_chunk_size))
 
-            if len(block_code) <= max_chunk_size:
-                chunk = Chunk(
-                    file_path=file_name,
-                    first_character_index=block_start,
-                    last_character_index=block_end,
-                    text=block_code)
+    # assemble the chunked module level imports into max_size chunks
+    for import_block in import_blocks:
+        start = import_block.first_character_index
+        end = import_block.last_character_index
 
-                is_import = isinstance(block, (ast.ImportFrom, ast.Import))
+        if imports == "":
+            imports_start_index = start
+            imports_end_index = end
+            imports = source[start:end]
+            continue
 
-                if is_import and is_module_level_import:
-                    import_blocks.append(chunk)
+        candidate = source[imports_start_index:end]
 
-                else:
-                    chunks.append(chunk)
-
-            else:
-                pieces = split_by_lines(block_code, max_chunk_size)
-
-                for relative_start, piece in pieces:
-                    absolute_start = block_start + relative_start
-                    absolute_end = absolute_start + len(piece)
-
-                    chunk = Chunk(
-                        file_path=file_name,
-                        first_character_index=absolute_start,
-                        last_character_index=absolute_end,
-                        text=piece,
-                    )
-
-                    chunks.append(chunk)
-
-        # assemble the chunked module level imports into max_size chunks
-        for import_block in import_blocks:
-            start = import_block.first_character_index
-            end = import_block.last_character_index
-
-            if imports == "":
-                imports_start_index = start
-                imports_end_index = end
-                imports = source[start:end]
-                continue
-
-            candidate = source[imports_start_index:end]
-
-            if len(candidate) <= max_chunk_size:
-                imports = candidate
-                imports_end_index = end
-            else:
-                chunks.append(Chunk(
-                    file_path=file_name,
-                    first_character_index=imports_start_index,
-                    last_character_index=imports_end_index,
-                    text=imports,
-                ))
-
-                imports_start_index = start
-                imports_end_index = end
-                imports = source[start:end]
-
-        # don't forget the last group of imports
-        if imports != "":
+        if len(candidate) <= max_chunk_size:
+            imports = candidate
+            imports_end_index = end
+        else:
             chunks.append(Chunk(
                 file_path=file_name,
                 first_character_index=imports_start_index,
@@ -158,8 +156,18 @@ def py_chunker(file_name: str, max_chunk_size: int) -> list[Chunk]:
                 text=imports,
             ))
 
-    except (ValidationError, SyntaxError) as e:
-        print(f"Chunking error in {file_name}: {e}")
+            imports_start_index = start
+            imports_end_index = end
+            imports = source[start:end]
+
+    # don't forget the last group of imports
+    if imports != "":
+        chunks.append(Chunk(
+            file_path=file_name,
+            first_character_index=imports_start_index,
+            last_character_index=imports_end_index,
+            text=imports,
+        ))
 
     return chunks
 
@@ -209,16 +217,8 @@ def md_chunker(file_name: str, max_chunk_size: int) -> list[Chunk]:
                     text=source[current_start:current_end],
                 ))
 
-            pieces = split_by_lines(source[start:end], max_chunk_size)
-
-            for relative_start, piece in pieces:
-                absolute_start = start + relative_start
-                chunks.append(Chunk(
-                    file_path=file_name,
-                    first_character_index=absolute_start,
-                    last_character_index=absolute_start + len(piece),
-                    text=piece,
-                ))
+            chunks.extend(lines_to_chunks(file_name, source[start:end],
+                                          start, max_chunk_size))
 
             current_start = end
             current_end = end

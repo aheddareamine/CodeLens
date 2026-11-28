@@ -5,15 +5,15 @@ from tqdm import tqdm
 from src.evaluate import recall_at_k
 from src.generator import Generator
 from src.indexer import build_index, load_index
-from src.models import MinimalAnswer, StudentSearchResultsAndAnswer
+from src.models import (MinimalAnswer, MinimalSource,
+                        StudentSearchResultsAndAnswer)
 from src.search import (load_dataset, load_search_results, save_json,
                         search_dataset, search_sources)
 
 
-# Default paths: every one can still be changed with its CLI argument.
+# Default paths
 RAW_DIR = "data/raw"
 INDEX_DIR = "data/processed"
-# where datasets_public.zip puts the datasets once unzipped in data/
 DATASET = ("data/datasets_public/public/UnansweredQuestions/"
            "dataset_docs_public.json")
 SEARCH_RESULTS = ("data/output/search_results/UnansweredQuestions/"
@@ -62,13 +62,26 @@ def validate_path(path: str, file_type: str = "file") -> Path | None:
     return checked_path
 
 
-def is_valid_k(k: int) -> bool:
-    """Tell whether k is a positive integer (prints an error if not)."""
-    # Fire gives a str for "--k abc" and a bool for "--k" alone
-    if isinstance(k, bool) or not isinstance(k, int) or k <= 0:
-        print(f"Error: k must be a positive integer, got {k!r}")
+def is_positive_int(value: int, name: str) -> bool:
+    """Tell whether value is a positive integer (prints an error if not)."""
+    # Fire gives a str for "--k abc", a float for "--k 2.5" and True for
+    # "--k" alone (True is an int in Python, so check bool first)
+    if isinstance(value, bool) or not isinstance(value, int):
+        print(f"Error: {name} must be an integer, got {value!r}")
         return False
+
+    if value <= 0:
+        print(f"Error: {name} must be positive, got {value}")
+        return False
+
     return True
+
+
+def format_source(source: MinimalSource) -> str:
+    """Write a source as "path [start:end]"."""
+    start = source.first_character_index
+    end = source.last_character_index
+    return f"{source.file_path} [{start}:{end}]"
 
 
 def make_save_folder(save_directory: str) -> Path | None:
@@ -92,12 +105,13 @@ class Cli:
     def index(self, max_chunk_size: int = 2000, raw_dir: str = RAW_DIR,
               index_dir: str = INDEX_DIR) -> None:
         """Ingest data/raw/ and build the index under data/processed/."""
-        # Fire gives a str if the user types --max_chunk_size abc
-        if isinstance(max_chunk_size, bool) or \
-                not isinstance(max_chunk_size, int) or \
-                not 0 < max_chunk_size <= 2000:
-            print("Error: max_chunk_size must be an integer between 1 "
-                  "and 2000")
+        if not is_positive_int(max_chunk_size, "max_chunk_size"):
+            return
+
+        # the moulinette rejects any source longer than 2000 characters
+        if max_chunk_size > 2000:
+            print(f"Error: max_chunk_size must be at most 2000, "
+                  f"got {max_chunk_size}")
             return
 
         try:
@@ -118,7 +132,7 @@ class Cli:
         if query.strip() == "":
             print("Error: the query is empty")
             return
-        if not is_valid_k(k):
+        if not is_positive_int(k, "k"):
             return
 
         index = load_index(index_dir)
@@ -131,17 +145,16 @@ class Cli:
             print("No results: no word of the query is in the index")
             return
 
-        for rank, source in enumerate(sources, start=1):
-            print(f"{rank}. {source.file_path} "
-                  f"[{source.first_character_index}:"
-                  f"{source.last_character_index}]")
+        rank = 1
+        for source in sources:
+            print(f"{rank}. {format_source(source)}")
+            rank += 1
 
     def search_dataset(self, dataset_path: str = DATASET, k: int = 10,
                        save_directory: str | None = None,
                        index_dir: str = INDEX_DIR) -> None:
-        """Run search over a whole dataset
-        and write a StudentSearchResults JSON file"""
-        if not is_valid_k(k):
+        """Search every question of a dataset, save StudentSearchResults."""
+        if not is_positive_int(k, "k"):
             return
 
         dataset_file = validate_path(dataset_path)
@@ -178,12 +191,12 @@ class Cli:
 
     def answer(self, query: str, k: int = 10,
                index_dir: str = INDEX_DIR) -> None:
-        """Answer a single query using the retrieved context"""
+        """Answer a single query using the retrieved context."""
         query = str(query)
         if query.strip() == "":
             print("Error: the query is empty")
             return
-        if not is_valid_k(k):
+        if not is_positive_int(k, "k"):
             return
 
         index = load_index(index_dir)
@@ -191,6 +204,10 @@ class Cli:
             return
         chunks, bm25 = index
         sources = search_sources(chunks, bm25, query, k)
+        if not sources:
+            # nothing to answer from: don't wait for the model to load
+            print("No results: no word of the query is in the index")
+            return
 
         generator = load_generator()
         if generator is None:
@@ -199,15 +216,12 @@ class Cli:
         print(generator.answer(query, sources))
         print("\nSources:")
         for source in sources:
-            print(f"  {source.file_path} "
-                  f"[{source.first_character_index}:"
-                  f"{source.last_character_index}]")
+            print(f"  {format_source(source)}")
 
     def answer_dataset(self,
                        student_search_results_path: str = SEARCH_RESULTS,
                        save_directory: str | None = None) -> None:
-        """Generate answers for a dataset,
-        producing a StudentSearchResultsAndAnswer JSON file."""
+        """Answer every question of a search results file."""
         results_file = validate_path(student_search_results_path)
         if results_file is None:
             return
@@ -231,12 +245,13 @@ class Cli:
         print(f"Loaded {len(results.search_results)} questions")
         answers: list[MinimalAnswer] = []
         for result in tqdm(results.search_results, desc="Answering"):
+            answer = generator.answer(result.question,
+                                      result.retrieved_sources)
             answers.append(MinimalAnswer(
                 question_id=result.question_id,
                 question=result.question,
                 retrieved_sources=result.retrieved_sources,
-                answer=generator.answer(result.question,
-                                        result.retrieved_sources),
+                answer=answer,
             ))
         print(f"Processed {len(answers)} of {len(results.search_results)} "
               f"questions")
@@ -250,8 +265,7 @@ class Cli:
 
     def evaluate(self, student_search_results_path: str = SEARCH_RESULTS,
                  dataset_path: str | None = None) -> None:
-        """Report your own recall@k against a ground-truth dataset,
-        for your own testing."""
+        """Print our own recall@k against a ground-truth dataset."""
         results_file = validate_path(student_search_results_path)
         if results_file is None:
             return
@@ -276,8 +290,9 @@ class Cli:
             print(f"Recall@{k}: {recall:.3f}")
 
         # the misses at @5 (the pass/fail k) are what we have to improve
-        _recall, missed = recall_at_k(results, dataset, min(5, results.k))
+        top = min(5, results.k)
+        _recall, missed = recall_at_k(results, dataset, top)
         print(f"\n{len(missed)} questions with no source found "
-              f"in the top {min(5, results.k)}:")
+              f"in the top {top}:")
         for question in missed:
             print(f"  - {question}")

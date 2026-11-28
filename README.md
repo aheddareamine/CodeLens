@@ -119,6 +119,8 @@ function, class, assignment) becomes a chunk that keeps its decorators.
 Consecutive module-level imports are grouped together until they reach
 the size limit. A block bigger than `max_chunk_size` is cut between lines,
 so no line is split unless a single line is longer than the limit.
+A file that `ast` cannot parse (syntax error, null bytes) is not dropped:
+it is cut between lines instead, so it stays searchable.
 
 **Markdown files** are cut at headings (`#` lines outside ``` code blocks),
 so each chunk is about one topic. Small sections are merged until the size
